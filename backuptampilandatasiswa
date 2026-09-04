@@ -1,0 +1,110 @@
+<?php
+include 'layout/header.php';
+
+$data_hasilsiswa = select("SELECT * FROM hasilsiswa ORDER BY id_siswa DESC");
+$data_perusahaan = select("SELECT * FROM perusahaan ORDER BY id_perusahaan DESC");
+
+// Mengelompokkan data siswa berdasarkan perusahaan dan nama siswa
+$grouped_data = [];
+foreach ($data_hasilsiswa as $hasilsiswa) {
+    for ($i = 1; $i <= 25; $i++) { // Loop dari 1 hingga 25 untuk mencakup semua soal
+        $perusahaan_key = 'perusahaan' . $i;
+        $soal_key = 'soal' . $i;
+        $perusahaan = $hasilsiswa[$perusahaan_key];
+        $siswa = $hasilsiswa['siswa'];
+        
+        if (!isset($grouped_data[$perusahaan])) {
+            $grouped_data[$perusahaan] = [];
+        }
+        
+        if (!isset($grouped_data[$perusahaan][$siswa])) {
+            $grouped_data[$perusahaan][$siswa] = [
+                'soal' => array_fill(0, 25, ''), // Inisialisasi array soal dengan 25 elemen kosong
+                'perusahaan' => $perusahaan
+            ];
+        }
+        
+        // Menyimpan nilai soal jika ada
+        if (isset($hasilsiswa[$soal_key])) {
+            $grouped_data[$perusahaan][$siswa]['soal'][$i - 1] = $hasilsiswa[$soal_key];
+        }
+    }
+}
+
+// Mendapatkan daftar perusahaan yang tersedia
+$perusahaan_list = array_keys($grouped_data);
+
+// Menentukan perusahaan yang dipilih
+$selected_perusahaan = isset($_GET['perusahaan']) ? $_GET['perusahaan'] : (count($perusahaan_list) > 0 ? $perusahaan_list[0] : '');
+?>
+
+<div class="container">
+    <br>
+    <h1>DATA SISWA BERDASARKAN PERUSAHAAN</h1>
+    <hr>
+
+    <!-- Dropdown untuk memilih perusahaan -->
+    <form method="GET" action="">
+        <div class="form-group">
+            <label for="perusahaan">Pilih Perusahaan:</label>
+            <select class="form-control" id="perusahaan" name="perusahaan" onchange="this.form.submit()">
+                <?php foreach ($perusahaan_list as $perusahaan): ?>
+                    <option value="<?= $perusahaan; ?>" <?= $selected_perusahaan == $perusahaan ? 'selected' : ''; ?>>
+                        <?= $perusahaan; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+    </form>
+
+    <?php if (isset($grouped_data[$selected_perusahaan])): ?>
+        <h2>Perusahaan: <?= $selected_perusahaan; ?></h2>
+        
+        <?php
+        // Menentukan kolom yang harus ditampilkan
+        $columns_to_show = [];
+        foreach ($grouped_data[$selected_perusahaan] as $siswa => $data) {
+            for ($i = 0; $i < 25; $i++) {
+                if (!empty($data['soal'][$i])) {
+                    $columns_to_show[$i] = true;
+                }
+            }
+        }
+        ?>
+        
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Nama Siswa</th>
+                    <?php for ($i = 0; $i < 25; $i++): ?>
+                        <?php if (isset($columns_to_show[$i])): ?>
+                            <th>Soal <?= $i + 1; ?></th>
+                        <?php endif; ?>
+                    <?php endfor; ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php $no = 1; ?>
+                <?php foreach ($grouped_data[$selected_perusahaan] as $siswa => $data): ?>
+                    <tr>
+                        <td><?= $no++; ?></td>
+                        <td><?= $siswa; ?></td>
+                        <?php for ($i = 0; $i < 25; $i++): ?>
+                            <?php if (isset($columns_to_show[$i])): ?>
+                                <td><?= $data['soal'][$i]; ?></td>
+                            <?php endif; ?>
+                        <?php endfor; ?>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <hr>
+    <?php else: ?>
+        <p>Tidak ada data untuk perusahaan yang dipilih.</p>
+    <?php endif; ?>
+</div>
+
+<?php
+include 'layout/footer.php';
+?>

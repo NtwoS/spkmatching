@@ -4,15 +4,17 @@ session_start();
 
 include 'config/app.php';
 
+// cek apakah $db belum cocok dengan dari config/app.php
+if (!isset($db)) {
+    die('Koneksi database belum ada, cek config/app.php');
+}
+
 //check apakah tombol ditekan
 if (isset($_POST['login'])) {
     // Mulai session jika belum dimulai
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
-
-    // Include atau koneksi ke database (pastikan $db sudah tersedia)
-    // require 'koneksi.php'; // jika belum ada
 
     // Ambil input dan sanitasi
     $username = mysqli_real_escape_string($db, $_POST['username']);
@@ -66,10 +68,10 @@ if (isset($_POST['login'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -181,7 +183,7 @@ if (isset($_POST['login'])) {
         .signup-link a:hover {
             color: #3f37c9;
         }
-        
+
         .form-check-label {
             font-size: 0.9rem;
             color: #4b5563;
@@ -219,12 +221,12 @@ if (isset($_POST['login'])) {
         <?php endif; ?>
 
         <form action="" method="POST">
-            <div class="form-floating"> 
+            <div class="form-floating">
                 <input type="text" name="username" class="form-control" id="floatingInput" placeholder="Username" required autofocus>
                 <label for="floatingInput"><i class="fas fa-user text-muted me-2"></i>Username</label>
             </div>
 
-            <div class="form-floating position-relative"> 
+            <div class="form-floating position-relative">
                 <input type="password" name="password" class="form-control pe-5" id="floatingPassword" placeholder="Password" required>
                 <label for="floatingPassword"><i class="fas fa-lock text-muted me-2"></i>Password</label>
                 <span class="password-toggle" onclick="togglePassword()">
@@ -233,8 +235,8 @@ if (isset($_POST['login'])) {
             </div>
 
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="form-check"> 
-                    <input class="form-check-input" type="checkbox" value="remember-me" id="checkDefault"> 
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="remember-me" id="checkDefault">
                     <label class="form-check-label" for="checkDefault">Ingat saya</label>
                 </div>
             </div>
@@ -242,7 +244,7 @@ if (isset($_POST['login'])) {
             <button class="btn btn-primary w-100 btn-login" type="submit" name="login">
                 MASUK <i class="fas fa-sign-in-alt ms-1"></i>
             </button>
-            
+
             <div class="signup-link">
                 Belum punya akun? <a href="signup.php">Daftar sekarang</a>
             </div>
@@ -254,7 +256,7 @@ if (isset($_POST['login'])) {
         function togglePassword() {
             const passwordInput = document.getElementById('floatingPassword');
             const toggleIcon = document.getElementById('togglePasswordIcon');
-            
+
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 toggleIcon.classList.remove('fa-eye');

@@ -331,7 +331,7 @@ $data_akun = select("SELECT * FROM akun WHERE id_akun = '$id_akun'");
                             </a>
                         </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="matchingDropdown" 
+                            <a class="nav-link dropdown-toggle <?= in_array(basename($_SERVER['PHP_SELF']), ['gap.php', 'pembobotan.php', 'factor.php', 'total.php', 'ranking.php']) ? 'active' : ''; ?>" href="#" id="matchingDropdown" 
                                 role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-project-diagram me-1"></i> Matching
                             </a>
@@ -342,6 +342,11 @@ $data_akun = select("SELECT * FROM akun WHERE id_akun = '$id_akun'");
                                 <li><a class="dropdown-item" href="total.php"><i class="fas fa-calculator me-2 text-muted"></i> Total</a></li>
                                 <li><a class="dropdown-item" href="ranking.php"><i class="fas fa-trophy me-2 text-muted"></i> Ranking</a></li>
                             </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'penempatan.php' ? 'active' : ''; ?>" aria-current="page" href="penempatan.php">
+                                <i class="fas fa-map-marked-alt me-1"></i> Penempatan
+                            </a>
                         </li>
                     <?php endif; ?>
                 </ul>

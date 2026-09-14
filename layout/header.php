@@ -1,8 +1,44 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 include 'config/app.php';
+
+$is_admin = (string) ($_SESSION['level'] ?? '') === '1';
+
+if (isset($_POST['simpan_pengaturan'])) {
+    if (!$is_admin) {
+        http_response_code(403);
+        exit('Akses ditolak.');
+    }
+
+    $hasil_pengaturan = validasi_pengaturan_csrf_token($_POST['csrf_token'] ?? '')
+        ? update_pengaturan_pendaftaran($_POST)
+        : [
+            'success' => false,
+            'message' => 'Permintaan pengaturan tidak valid. Silakan coba lagi.'
+        ];
+
+    $_SESSION['pengaturan_flash'] = $hasil_pengaturan['message'];
+    header('Location: home.php');
+    exit;
+}
+
+$pengaturan_flash = $_SESSION['pengaturan_flash'] ?? null;
+unset($_SESSION['pengaturan_flash']);
+
+$pengaturan_pendaftaran = $is_admin ? get_pengaturan_pendaftaran() : null;
+$pengaturan_pendaftaran ??= [
+    'status_pendaftaran' => 'buka',
+    'nis_min' => '0',
+    'nis_max' => '999999999999999999999999999999',
+    'hanya_terkalkulasi' => 0
+];
+
 // Get only the logged-in user's data
-$id_akun = $_SESSION['id_akun']; // Assuming you store user ID in session
-$data_akun = select("SELECT * FROM akun WHERE id_akun = '$id_akun'");
+$id_akun = (int) ($_SESSION['id_akun'] ?? 0);
+$data_akun = $id_akun > 0 ? select("SELECT * FROM akun WHERE id_akun = {$id_akun}") : [];
 ?>
 
 <!doctype html>
@@ -128,6 +164,35 @@ $data_akun = select("SELECT * FROM akun WHERE id_akun = '$id_akun'");
             height: 28px;
             border-radius: 50%;
             font-size: 0.8rem;
+        }
+
+        .nav-setting-btn {
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+            color: #4361ee;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+
+        .nav-setting-btn:hover {
+            background-color: #eef2ff;
+            color: #3f37c9;
+            transform: translateY(-2px);
+        }
+
+        .setting-panel {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 1rem;
+        }
+
+        .setting-panel .form-check-input:checked {
+            background-color: #4361ee;
+            border-color: #4361ee;
         }
 
         /* Modal Profile Modernization */
@@ -331,7 +396,7 @@ $data_akun = select("SELECT * FROM akun WHERE id_akun = '$id_akun'");
                             </a>
                         </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="matchingDropdown" 
+                            <a class="nav-link dropdown-toggle <?= in_array(basename($_SERVER['PHP_SELF']), ['gap.php', 'pembobotan.php', 'factor.php', 'total.php', 'ranking.php']) ? 'active' : ''; ?>" href="#" id="matchingDropdown" 
                                 role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-project-diagram me-1"></i> Matching
                             </a>
@@ -343,22 +408,39 @@ $data_akun = select("SELECT * FROM akun WHERE id_akun = '$id_akun'");
                                 <li><a class="dropdown-item" href="ranking.php"><i class="fas fa-trophy me-2 text-muted"></i> Ranking</a></li>
                             </ul>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'penempatan.php' ? 'active' : ''; ?>" aria-current="page" href="penempatan.php">
+                                <i class="fas fa-map-marked-alt me-1"></i> Penempatan
+                            </a>
+                        </li>
                     <?php endif; ?>
                 </ul>
                 
-                <div class="d-none d-lg-flex ms-auto">
+                <div class="d-none d-lg-flex ms-auto align-items-center gap-2">
                     <a class="nav-profile-btn" data-bs-toggle="modal" data-bs-target="#profileModal" href="#">
                         <i class="fas fa-user"></i>
                         <?= htmlspecialchars($_SESSION['nama'] ?? '') ?>
                     </a>
+                    <?php if ($is_admin): ?>
+                        <button type="button" class="btn btn-light rounded-circle shadow-sm nav-setting-btn" data-bs-toggle="modal" data-bs-target="#settingModal" title="Pengaturan Pendaftaran" aria-label="Pengaturan Pendaftaran">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    <?php endif; ?>
                 </div>
             </div>
             
             <div class="d-lg-none mt-3 mt-lg-0 w-100 collapse" id="profileCollapse">
-                <a class="nav-profile-btn w-100 justify-content-center mt-3" data-bs-toggle="modal" data-bs-target="#profileModal" href="#">
-                    <i class="fas fa-user"></i>
-                    <?= htmlspecialchars($_SESSION['nama'] ?? '') ?>
-                </a>
+                <div class="d-flex align-items-center gap-2 mt-3">
+                    <a class="nav-profile-btn flex-grow-1 justify-content-center" data-bs-toggle="modal" data-bs-target="#profileModal" href="#">
+                        <i class="fas fa-user"></i>
+                        <?= htmlspecialchars($_SESSION['nama'] ?? '') ?>
+                    </a>
+                    <?php if ($is_admin): ?>
+                        <button type="button" class="btn btn-light rounded-circle shadow-sm nav-setting-btn flex-shrink-0" data-bs-toggle="modal" data-bs-target="#settingModal" title="Pengaturan Pendaftaran" aria-label="Pengaturan Pendaftaran">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </nav>
@@ -438,6 +520,73 @@ $data_akun = select("SELECT * FROM akun WHERE id_akun = '$id_akun'");
         </div>
     </div>
 
+    <?php if ($is_admin): ?>
+        <!-- Registration Settings Modal -->
+        <div class="modal fade" id="settingModal" tabindex="-1" aria-labelledby="settingModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header align-items-center">
+                        <h5 class="modal-title m-0" id="settingModalLabel"><i class="fas fa-cog me-2"></i> Pengaturan Pendaftaran</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form action="home.php" method="POST">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(get_pengaturan_csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
+                        <div class="modal-body p-4">
+                            <div class="setting-panel mb-4">
+                                <div class="d-flex align-items-center justify-content-between gap-3">
+                                    <div>
+                                        <span class="profile-label">Status Pendaftaran</span>
+                                        <p class="mb-0 text-secondary small">Tentukan apakah siswa dapat membuat akun baru.</p>
+                                    </div>
+                                    <div class="form-check form-switch flex-shrink-0">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="statusPendaftaran" name="status_pendaftaran" value="buka"
+                                            <?= ($pengaturan_pendaftaran['status_pendaftaran'] ?? 'buka') === 'buka' ? 'checked' : '' ?>>
+                                        <label class="form-check-label fw-semibold" for="statusPendaftaran" id="statusPendaftaranLabel">
+                                            <?= ($pengaturan_pendaftaran['status_pendaftaran'] ?? 'buka') === 'buka' ? 'Buka' : 'Tutup' ?>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold text-dark">Rentang NIS yang Diizinkan</label>
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <label for="nisMin" class="form-label small text-secondary">NIS Awal (Mulai Dari)</label>
+                                        <input type="text" class="form-control" id="nisMin" name="nis_min" inputmode="numeric" pattern="[0-9]{1,30}" maxlength="30" required
+                                            value="<?= htmlspecialchars((string) ($pengaturan_pendaftaran['nis_min'] ?? '0'), ENT_QUOTES, 'UTF-8') ?>">
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label for="nisMax" class="form-label small text-secondary">NIS Akhir (Sampai Dengan)</label>
+                                        <input type="text" class="form-control" id="nisMax" name="nis_max" inputmode="numeric" pattern="[0-9]{1,30}" maxlength="30" required
+                                            value="<?= htmlspecialchars((string) ($pengaturan_pendaftaran['nis_max'] ?? '999999999999999999999999999999'), ENT_QUOTES, 'UTF-8') ?>">
+                                    </div>
+                                </div>
+                                <div class="form-text">Contoh: 70000000 sampai 99999999.</div>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="hanyaTerkalkulasi" name="hanya_terkalkulasi" value="1"
+                                    <?= (int) ($pengaturan_pendaftaran['hanya_terkalkulasi'] ?? 0) === 1 ? 'checked' : '' ?>>
+                                <label class="form-check-label text-secondary" for="hanyaTerkalkulasi">
+                                    Hanya izinkan siswa yang sudah masuk dalam kalkulasi penempatan PKL (datasiswa).
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer d-flex justify-content-between">
+                            <button type="button" class="btn btn-light btn-modern text-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times"></i> Batal
+                            </button>
+                            <button type="submit" name="simpan_pengaturan" value="1" class="btn btn-primary btn-modern">
+                                <i class="fas fa-save"></i> Simpan Pengaturan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
@@ -462,7 +611,20 @@ $data_akun = select("SELECT * FROM akun WHERE id_akun = '$id_akun'");
                     bsCollapse.hide();
                 });
             }
+
+            var statusPendaftaran = document.getElementById('statusPendaftaran');
+            var statusPendaftaranLabel = document.getElementById('statusPendaftaranLabel');
+            if (statusPendaftaran && statusPendaftaranLabel) {
+                statusPendaftaran.addEventListener('change', function () {
+                    statusPendaftaranLabel.textContent = statusPendaftaran.checked ? 'Buka' : 'Tutup';
+                });
+            }
         });
     </script>
+    <?php if ($pengaturan_flash !== null): ?>
+        <script>
+            alert(<?= json_encode($pengaturan_flash, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>);
+        </script>
+    <?php endif; ?>
 </body>
 </html>

@@ -86,6 +86,31 @@ $perusahaan_list = array_filter(array_keys($grouped_data), function ($perusahaan
 // Menentukan perusahaan yang dipilih
 $selected_perusahaan = isset($_GET['perusahaan']) ? $_GET['perusahaan'] : (count($perusahaan_list) > 0 ? reset($perusahaan_list) : '');
 
+// Pemetaan nama lengkap perusahaan dari tabel perusahaan (agar nama resmi & tidak terpotong)
+$perusahaan_names_map = [];
+$full_companies = [];
+if (!empty($data_perusahaan)) {
+    foreach ($data_perusahaan as $dp) {
+        $c = trim($dp['perusahaan']);
+        if (!empty($c)) $full_companies[] = $c;
+    }
+}
+foreach ($perusahaan_list as $ds_p) {
+    $p_trim = trim($ds_p);
+    $matched = false;
+    foreach ($full_companies as $fc) {
+        if ($p_trim === $fc || strpos($fc, $p_trim) === 0) {
+            $perusahaan_names_map[$ds_p] = $fc;
+            $matched = true;
+            break;
+        }
+    }
+    if (!$matched) {
+        $perusahaan_names_map[$ds_p] = $ds_p;
+    }
+}
+$selected_perusahaan_display = $perusahaan_names_map[$selected_perusahaan] ?? $selected_perusahaan;
+
 // Menghitung nilai akhir (N(a)) dan menyiapkan data untuk ranking
 $final_scores = [];
 if (isset($grouped_data[$selected_perusahaan])) {
@@ -133,24 +158,31 @@ if (isset($grouped_data[$selected_perusahaan])) {
             </h2>
             <p class="text-secondary mb-0">Peringkat siswa berdasarkan nilai akhir tertinggi ke terendah</p>
         </div>
-        <a href="cetak-excel-all.php?perusahaan=<?= urlencode($selected_perusahaan); ?>" class="btn btn-success px-4 py-2 shadow-sm" style="border-radius: 10px; font-weight: 500;">
-            <i class="fas fa-file-excel me-2"></i> CETAK
-        </a>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="cetak-excel-all.php?perusahaan=<?= urlencode($selected_perusahaan); ?>" id="btnCetak1" class="btn btn-primary px-3 py-2 shadow-sm rounded-3 fw-medium">
+                <i class="fas fa-building me-1"></i> Cetak 1 Perusahaan
+            </a>
+            <a href="cetak-excel-all.php?mode=all" class="btn btn-success px-3 py-2 shadow-sm rounded-3 fw-medium">
+                <i class="fas fa-layer-group me-1"></i> Cetak Semua Perusahaan
+            </a>
+        </div>
     </div>
 
     <!-- Filter Section -->
     <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px;">
         <div class="card-body p-4">
             <form method="GET" action="" class="m-0">
-                <div class="col-md-8 col-lg-6">
+                <div class="col-12">
                     <label for="perusahaan" class="form-label fw-semibold text-secondary small text-uppercase mb-2">
                         <i class="fas fa-filter me-1"></i> Filter Perusahaan
                     </label>
-                    <select class="form-select border-0 shadow-sm" style="padding: 0.75rem 1rem; border-radius: 10px;" id="perusahaan" name="perusahaan" onchange="this.form.submit()">
+                    <select class="form-select border-0 shadow-sm w-100" style="padding: 0.75rem 1rem; border-radius: 10px;" id="perusahaan" name="perusahaan" onchange="this.form.submit()">
                         <?php foreach ($perusahaan_list as $perusahaan):
-                            if (!empty(trim($perusahaan))): ?>
+                            if (!empty(trim($perusahaan))): 
+                                $display_perusahaan = $perusahaan_names_map[$perusahaan] ?? $perusahaan;
+                            ?>
                                 <option value="<?= htmlspecialchars($perusahaan); ?>" <?= $selected_perusahaan == $perusahaan ? 'selected' : ''; ?>>
-                                    <?= htmlspecialchars($perusahaan); ?>
+                                    <?= htmlspecialchars($display_perusahaan); ?>
                                 </option>
                             <?php endif; ?>
                         <?php endforeach; ?>
@@ -162,13 +194,18 @@ if (isset($grouped_data[$selected_perusahaan])) {
 
     <?php if (isset($grouped_data[$selected_perusahaan]) && !empty($final_scores)): ?>
         <div class="custom-table-container p-4">
-            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-light">
-                <span class="badge bg-soft-primary text-primary px-3 py-2 rounded-pill">
-                    <i class="fas fa-building me-1"></i> <?= htmlspecialchars($selected_perusahaan); ?>
-                </span>
-                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
-                    <?= count($final_scores); ?> Siswa
-                </span>
+            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-light flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-soft-primary text-primary px-3 py-2 rounded-pill fs-6">
+                        <i class="fas fa-building me-1"></i> <?= htmlspecialchars($selected_perusahaan_display); ?>
+                    </span>
+                    <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
+                        <?= count($final_scores); ?> Siswa
+                    </span>
+                </div>
+                <a href="cetak-excel-all.php?perusahaan=<?= urlencode($selected_perusahaan); ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-medium shadow-sm">
+                    <i class="fas fa-print me-1"></i> Cetak Laporan Perusahaan Ini
+                </a>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle" id="datatable" style="white-space: nowrap;">
@@ -178,10 +215,15 @@ if (isset($grouped_data[$selected_perusahaan])) {
                             <th class="text-secondary" style="min-width:200px;">Nama Siswa</th>
                             <th class="text-secondary">NIS</th>
                             <th class="text-center text-secondary">Nilai Akhir</th>
+                            <th class="text-center text-secondary">Keterangan</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php $no = 1; ?>
+                        <?php 
+                        // Kuota siswa yang diterima per perusahaan (misal: 5 siswa teratas)
+                        $kuota = 5; 
+                        $no = 1; 
+                        ?>
                         <?php foreach ($final_scores as $score): ?>
                             <?php
                             if ($no === 1) { $color = '#FFD700'; $icon = 'fa-trophy'; $bg = '#fffbeb'; }
@@ -203,6 +245,17 @@ if (isset($grouped_data[$selected_perusahaan])) {
                                         <?= number_format($score['final_score'], 2); ?>
                                     </span>
                                 </td>
+                                <td class="text-center">
+                                    <?php if ($no <= $kuota): ?>
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill fw-semibold">
+                                            <i class="fas fa-check-circle me-1"></i> Diterima
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-3 py-2 rounded-pill fw-normal">
+                                            <i class="fas fa-minus-circle me-1"></i> Belum Lolos
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                             <?php $no++; ?>
                         <?php endforeach; ?>
@@ -221,7 +274,18 @@ if (isset($grouped_data[$selected_perusahaan])) {
     <?php endif; ?>
 </div>
 
-
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var select = document.getElementById('perusahaan');
+    if (select) {
+        select.addEventListener('change', function() {
+            var val = this.value;
+            var btn = document.getElementById('btnCetak1');
+            if (btn) btn.href = 'cetak-excel-all.php?perusahaan=' + encodeURIComponent(val);
+        });
+    }
+});
+</script>
 
 <?php
 include 'layout/footer.php';

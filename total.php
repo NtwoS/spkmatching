@@ -78,6 +78,17 @@ function calculateFinalScore($cf, $sf)
 ?>
 
 <style>
+    .factorclass { font-size: 0.9em; }
+
+     #perusahaan {
+        white-space: normal;
+    }
+
+    #perusahaan option {
+        white-space: normal;
+        word-wrap: break-word;
+        padding: 8px 12px;
+    }
     /* Tabel Total: layout fixed agar muat di desktop */
     .total-table {
         table-layout: fixed;
@@ -117,11 +128,11 @@ function calculateFinalScore($cf, $sf)
     <div class="card border-0 shadow-sm mb-4" style="border-radius: 15px;">
         <div class="card-body p-4">
             <form method="GET" action="" class="m-0">
-                <div class="col-md-8 col-lg-6">
+                <div class="col-12">
                     <label for="perusahaan" class="form-label fw-semibold text-secondary small text-uppercase mb-2">
                         <i class="fas fa-filter me-1"></i> Filter Perusahaan
                     </label>
-                    <select class="form-select border-0 shadow-sm" style="padding: 0.75rem 1rem; border-radius: 10px;" id="perusahaan" name="perusahaan" onchange="this.form.submit()">
+                    <select class="form-select border-0 shadow-sm w-100" style="padding: 0.75rem 1rem; border-radius: 10px;" id="perusahaan" name="perusahaan" onchange="this.form.submit()">
                         <?php foreach ($perusahaan_list as $perusahaan):
                             if (!empty(trim($perusahaan))): ?>
                                 <option value="<?= htmlspecialchars($perusahaan); ?>" <?= $selected_perusahaan == $perusahaan ? 'selected' : ''; ?>>

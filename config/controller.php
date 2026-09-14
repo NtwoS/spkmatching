@@ -16,6 +16,213 @@ function select($query)
     return $rows;
 }
 
+function ensure_pengaturan_pendaftaran_table()
+{
+    global $db;
+    static $ready = null;
+
+    if ($ready !== null) {
+        return $ready;
+    }
+
+    if (!isset($db)) {
+        return false;
+    }
+
+    $query = "CREATE TABLE IF NOT EXISTS pengaturan_pendaftaran (
+        id INT NOT NULL PRIMARY KEY,
+        status_pendaftaran ENUM('buka', 'tutup') NOT NULL DEFAULT 'buka',
+        nis_min VARCHAR(30) NOT NULL DEFAULT '0',
+        nis_max VARCHAR(30) NOT NULL DEFAULT '999999999999999999999999999999',
+        hanya_terkalkulasi TINYINT(1) NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
+
+    $ready = mysqli_query($db, $query) !== false;
+    return $ready;
+}
+
+function normalisasi_nis_pendaftaran($nis)
+{
+    $nis = trim((string) $nis);
+
+    if (!preg_match('/^[0-9]{1,30}$/D', $nis)) {
+        return null;
+    }
+
+    return ltrim($nis, '0') ?: '0';
+}
+
+function bandingkan_nis_pendaftaran($nis_a, $nis_b)
+{
+    if (strlen($nis_a) !== strlen($nis_b)) {
+        return strlen($nis_a) <=> strlen($nis_b);
+    }
+
+    return strcmp($nis_a, $nis_b);
+}
+
+function get_pengaturan_pendaftaran()
+{
+    global $db;
+
+    if (!ensure_pengaturan_pendaftaran_table()) {
+        return null;
+    }
+
+    mysqli_query($db, "INSERT IGNORE INTO pengaturan_pendaftaran
+        (id, status_pendaftaran, nis_min, nis_max, hanya_terkalkulasi)
+        VALUES (1, 'buka', '0', '999999999999999999999999999999', 0)");
+
+    $result = mysqli_query($db, "SELECT status_pendaftaran, nis_min, nis_max, hanya_terkalkulasi
+        FROM pengaturan_pendaftaran WHERE id = 1 LIMIT 1");
+
+    if (!$result) {
+        return null;
+    }
+
+    $setting = mysqli_fetch_assoc($result);
+    if (!$setting) {
+        return null;
+    }
+
+    $setting['hanya_terkalkulasi'] = (int) $setting['hanya_terkalkulasi'];
+    return $setting;
+}
+
+function update_pengaturan_pendaftaran($post)
+{
+    global $db;
+
+    if (!ensure_pengaturan_pendaftaran_table()) {
+        return [
+            'success' => false,
+            'message' => 'Pengaturan pendaftaran gagal disimpan karena tabel belum dapat dibuat.'
+        ];
+    }
+
+    $nis_min = normalisasi_nis_pendaftaran($post['nis_min'] ?? '');
+    $nis_max = normalisasi_nis_pendaftaran($post['nis_max'] ?? '');
+
+    if ($nis_min === null || $nis_max === null) {
+        return [
+            'success' => false,
+            'message' => 'NIS Awal dan NIS Akhir wajib berupa angka maksimal 30 digit.'
+        ];
+    }
+
+    if (bandingkan_nis_pendaftaran($nis_min, $nis_max) > 0) {
+        return [
+            'success' => false,
+            'message' => 'NIS Awal tidak boleh lebih besar daripada NIS Akhir.'
+        ];
+    }
+
+    $status = ($post['status_pendaftaran'] ?? '') === 'buka' ? 'buka' : 'tutup';
+    $hanya_terkalkulasi = isset($post['hanya_terkalkulasi']) ? 1 : 0;
+    $query = "UPDATE pengaturan_pendaftaran
+        SET status_pendaftaran = ?, nis_min = ?, nis_max = ?, hanya_terkalkulasi = ?
+        WHERE id = 1";
+    $stmt = mysqli_prepare($db, $query);
+
+    if (!$stmt) {
+        return [
+            'success' => false,
+            'message' => 'Pengaturan pendaftaran gagal disimpan.'
+        ];
+    }
+
+    mysqli_stmt_bind_param($stmt, 'sssi', $status, $nis_min, $nis_max, $hanya_terkalkulasi);
+    $success = mysqli_stmt_execute($stmt);
+    mysqli_stmt_close($stmt);
+
+    return [
+        'success' => $success,
+        'message' => $success
+            ? 'Pengaturan pendaftaran berhasil disimpan.'
+            : 'Pengaturan pendaftaran gagal disimpan.'
+    ];
+}
+
+function validasi_pendaftaran_siswa($nis)
+{
+    global $db;
+
+    $nis_normal = normalisasi_nis_pendaftaran($nis);
+    $nis_tampil = trim((string) $nis);
+
+    if ($nis_normal === null) {
+        return 'NIS harus berupa angka maksimal 30 digit.';
+    }
+
+    $setting = get_pengaturan_pendaftaran();
+    if ($setting === null) {
+        return 'Pengaturan pendaftaran belum dapat dibaca. Silakan coba lagi nanti.';
+    }
+
+    if ($setting['status_pendaftaran'] !== 'buka') {
+        return 'Pendaftaran akun siswa PKL saat ini sedang ditutup oleh Admin.';
+    }
+
+    $nis_min = normalisasi_nis_pendaftaran($setting['nis_min']);
+    $nis_max = normalisasi_nis_pendaftaran($setting['nis_max']);
+    if ($nis_min === null || $nis_max === null || bandingkan_nis_pendaftaran($nis_min, $nis_max) > 0) {
+        return 'Rentang NIS pendaftaran belum diatur dengan benar oleh Admin.';
+    }
+
+    if (bandingkan_nis_pendaftaran($nis_normal, $nis_min) < 0
+        || bandingkan_nis_pendaftaran($nis_normal, $nis_max) > 0) {
+        return "NIS {$nis_tampil} tidak memenuhi syarat rentang pendaftaran PKL yang ditentukan oleh sekolah.";
+    }
+
+    if ((int) $setting['hanya_terkalkulasi'] === 1) {
+        $stmt = mysqli_prepare($db, 'SELECT 1 FROM datasiswa WHERE nis = ? LIMIT 1');
+        if (!$stmt) {
+            return 'Data kalkulasi siswa belum dapat diperiksa. Silakan coba lagi nanti.';
+        }
+
+        mysqli_stmt_bind_param($stmt, 's', $nis_normal);
+        $executed = mysqli_stmt_execute($stmt);
+        $stored = $executed && mysqli_stmt_store_result($stmt);
+        $exists = $stored && mysqli_stmt_num_rows($stmt) > 0;
+        mysqli_stmt_close($stmt);
+
+        if (!$stored) {
+            return 'Data kalkulasi siswa belum dapat diperiksa. Silakan coba lagi nanti.';
+        }
+
+        if (!$exists) {
+            return "NIS {$nis_tampil} belum terdaftar dalam kalkulasi penempatan PKL.";
+        }
+    }
+
+    return null;
+}
+
+function get_pengaturan_csrf_token()
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+
+    if (empty($_SESSION['pengaturan_csrf_token'])) {
+        $_SESSION['pengaturan_csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['pengaturan_csrf_token'];
+}
+
+function validasi_pengaturan_csrf_token($token)
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return false;
+    }
+
+    return is_string($token)
+        && isset($_SESSION['pengaturan_csrf_token'])
+        && hash_equals($_SESSION['pengaturan_csrf_token'], $token);
+}
+
 //Function Menambahkan Data siswa
 function create_siswa($post)
 {

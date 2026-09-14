@@ -5,11 +5,20 @@ include 'config/app.php';
 // jika tombol tambah di tekan jalankan script
 if (isset($_POST['tambah'])) {
     // Validasi email harus @gmail.com
-    if (!preg_match("/@gmail\.com$/", $_POST['email'])) {
+    if (!preg_match("/@gmail\.com$/i", (string) ($_POST['email'] ?? ''))) {
         echo "<script>
         alert('Harap masukkan alamat email Gmail yang valid (contoh: example@gmail.com)');
         document.location.href = 'signup.php';
         </script>";
+        exit();
+    }
+
+    $error_pendaftaran = validasi_pendaftaran_siswa($_POST['nis'] ?? '');
+    if ($error_pendaftaran !== null) {
+        echo '<script>alert(' . json_encode(
+            $error_pendaftaran,
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+        ) . '); document.location.href = "signup.php";</script>';
         exit();
     }
 

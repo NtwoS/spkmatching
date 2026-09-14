@@ -72,6 +72,17 @@ $selected_perusahaan = isset($_GET['perusahaan']) ? $_GET['perusahaan'] : (count
     .faktorclass {
         font-size: .9em;
     }
+
+    /* Membuat opsi dropdown bisa wrap agar nama perusahaan panjang tetap terbaca penuh */
+    #perusahaan {
+        white-space: normal;
+    }
+
+    #perusahaan option {
+        white-space: normal;
+        word-wrap: break-word;
+        padding: 8px 12px;
+    }
 </style>
 <div class="container-fluid container-xl mt-4 mb-5">
     <!-- Page Header -->
@@ -89,11 +100,11 @@ $selected_perusahaan = isset($_GET['perusahaan']) ? $_GET['perusahaan'] : (count
         <div class="card-body p-4">
             <form method="GET" action="" class="m-0">
                 <div class="row align-items-center">
-                    <div class="col-md-8 col-lg-6">
+                    <div class="col-12">
                         <label for="perusahaan" class="form-label fw-semibold text-secondary small text-uppercase mb-2">
                             <i class="fas fa-filter me-1"></i> Filter Berdasarkan Perusahaan
                         </label>
-                        <select class="form-select border-0 shadow-sm" style="background-color: #fff; cursor: pointer; padding: 0.75rem 1rem; border-radius: 10px;" id="perusahaan" name="perusahaan" onchange="this.form.submit()">
+                        <select class="form-select border-0 shadow-sm w-100" style="background-color: #fff; cursor: pointer; padding: 0.75rem 1rem; border-radius: 10px;" id="perusahaan" name="perusahaan" onchange="this.form.submit()">
                             <?php foreach ($perusahaan_list as $perusahaan):
                                 if (!empty(trim($perusahaan))): ?>
                                     <option value="<?= htmlspecialchars($perusahaan); ?>" <?= $selected_perusahaan == $perusahaan ? 'selected' : ''; ?>>

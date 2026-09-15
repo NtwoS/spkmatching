@@ -313,6 +313,7 @@ $selected_display_name = !empty($selected_perusahaan) ? ($full_names_map[$select
         /* Tabel Presisi Sesuai Gambar 3 */
         table.table-report {
             width: 100% !important;
+            table-layout: auto !important;
             border-collapse: collapse !important;
             border: none !important;
             font-family: Arial, sans-serif !important;
@@ -329,6 +330,7 @@ $selected_display_name = !empty($selected_perusahaan) ? ($full_names_map[$select
             border: none !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            white-space: nowrap !important;
         }
         table.table-report tbody td {
             padding: 7px 10px !important;
@@ -338,6 +340,8 @@ $selected_display_name = !empty($selected_perusahaan) ? ($full_names_map[$select
             border-bottom: 1px solid #e9ecef !important;
             font-size: 9pt !important;
             vertical-align: middle !important;
+            white-space: normal !important;
+            word-wrap: break-word !important;
         }
         table.table-report tbody tr:nth-child(even) td {
             background-color: #f8f9fa !important;
@@ -345,13 +349,13 @@ $selected_display_name = !empty($selected_perusahaan) ? ($full_names_map[$select
             print-color-adjust: exact !important;
         }
 
-        /* Kolom Spesifik */
-        table.table-report .col-no { text-align: center !important; width: 6%; }
-        table.table-report .col-siswa { font-weight: 700 !important; color: #18242f !important; text-align: left !important; width: 32%; }
-        table.table-report .col-nis { font-family: ui-monospace, "Cascadia Code", monospace !important; color: #56656f !important; text-align: left !important; width: 18%; }
-        table.table-report .col-nilai { text-align: center !important; font-weight: 700 !important; color: #0a58ca !important; width: 14%; }
-        table.table-report .col-ranking { text-align: center !important; font-weight: 600 !important; color: #18242f !important; width: 14%; }
-        table.table-report .col-keterangan { text-align: center !important; width: 16%; }
+        /* Kolom Spesifik - auto-fit tanpa fixed width */
+        table.table-report .col-no { text-align: center !important; white-space: nowrap !important; }
+        table.table-report .col-siswa { font-weight: 700 !important; color: #18242f !important; text-align: left !important; }
+        table.table-report .col-nis { font-family: ui-monospace, "Cascadia Code", monospace !important; color: #56656f !important; text-align: left !important; white-space: nowrap !important; }
+        table.table-report .col-nilai { text-align: center !important; font-weight: 700 !important; color: #0a58ca !important; white-space: nowrap !important; }
+        table.table-report .col-ranking { text-align: center !important; font-weight: 600 !important; color: #18242f !important; white-space: nowrap !important; }
+        table.table-report .col-keterangan { text-align: center !important; white-space: nowrap !important; }
 
         /* Media Print Khusus */
         @media print { 
@@ -741,6 +745,7 @@ $selected_display_name = !empty($selected_perusahaan) ? ($full_names_map[$select
         .dataTables_filter input::placeholder { color: #9aa7b1; }
 
         table.table-report {
+            table-layout: auto !important;
             border-collapse: separate !important;
             border-spacing: 0 !important;
             overflow: hidden;
@@ -876,6 +881,8 @@ $selected_display_name = !empty($selected_perusahaan) ? ($full_names_map[$select
             .report-hero p.company-name { font-size: 10pt; }
             .report-date-box strong { font-size: 10pt; }
             table.table-report {
+                width: 100% !important;
+                table-layout: auto !important;
                 border: 0 !important;
                 border-radius: 0;
                 font-size: 9pt !important;
@@ -884,10 +891,13 @@ $selected_display_name = !empty($selected_perusahaan) ? ($full_names_map[$select
                 background: #edf2f6 !important;
                 color: #243542 !important;
                 font-size: 8pt !important;
+                white-space: nowrap !important;
             }
             table.table-report tbody td {
                 padding: 7px 8px !important;
                 font-size: 9pt !important;
+                white-space: normal !important;
+                word-wrap: break-word !important;
             }
         }
 

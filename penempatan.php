@@ -748,12 +748,12 @@ window.addEventListener('afterprint', function() {
     }
 
     /* Pembagian persentase kolom pas 100% tanpa kolom peringkat */
-    #datatablePenempatan .col-no { width: 6% !important; text-align: center !important; color: #000000 !important; }
-    #datatablePenempatan .col-siswa { width: 26% !important; text-align: left !important; color: #000000 !important; }
-    #datatablePenempatan .col-nis { width: 14% !important; text-align: left !important; color: #000000 !important; font-family: inherit !important; }
+    #datatablePenempatan .col-no { width: 5% !important; text-align: center !important; color: #000000 !important; }
+    #datatablePenempatan .col-siswa { width: 20% !important; text-align: left !important; color: #000000 !important; }
+    #datatablePenempatan .col-nis { width: 12% !important; text-align: left !important; color: #000000 !important; font-family: inherit !important; }
     #datatablePenempatan .col-perusahaan { width: 38% !important; text-align: left !important; color: #000000 !important; }
-    #datatablePenempatan .col-nilai { width: 8% !important; text-align: center !important; color: #000000 !important; }
-    #datatablePenempatan .col-status { width: 8% !important; text-align: center !important; color: #000000 !important; }
+    #datatablePenempatan .col-nilai { width: 12% !important; text-align: center !important; color: #000000 !important; }
+    #datatablePenempatan .col-status { width: 13% !important; text-align: center !important; }
 
     #datatablePenempatan tr {
         page-break-inside: avoid !important;
@@ -768,6 +768,17 @@ window.addEventListener('afterprint', function() {
         font-size: 9pt !important;
         font-weight: normal !important;
     }
+
+    /* Status Diterima: teks hijau tanpa kotak/background */
+    .placement-status {
+        border: none !important;
+        background: transparent !important;
+        color: #187653 !important;
+        font-weight: bold !important;
+        padding: 0 !important;
+        font-size: 9pt !important;
+    }
+
     .badge i, 
     td .rounded-circle, 
     td i {
